@@ -58,4 +58,8 @@ public class MoneyService {
 
 		moneyMoveRepository.save(returnedMove);
 	}
+
+	public void deleteAll() {
+		moneyMoveRepository.deleteAll();
+	}
 }

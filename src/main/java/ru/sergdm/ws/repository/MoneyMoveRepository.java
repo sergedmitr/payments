@@ -9,4 +9,5 @@ import java.util.List;
 public interface MoneyMoveRepository extends CrudRepository<MoneyMove, Long>,
 		JpaSpecificationExecutor<MoneyMove> {
 	List<MoneyMove> findByUserId(Long userId);
+	void deleteByUserId(Long userId);
 }
