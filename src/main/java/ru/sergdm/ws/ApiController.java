@@ -14,14 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.sergdm.ws.exception.ResourceNotExpectedException;
 import ru.sergdm.ws.exception.ResourceNotFoundException;
 import ru.sergdm.ws.exception.WrongUserException;
+import ru.sergdm.ws.model.Notification;
+import ru.sergdm.ws.kafka.NotificationSender;
+import ru.sergdm.ws.model.Account;
 import ru.sergdm.ws.model.MoneyMove;
 import ru.sergdm.ws.model.ReturnRequest;
 import ru.sergdm.ws.model.SystemName;
+import ru.sergdm.ws.service.AccountService;
 import ru.sergdm.ws.service.MoneyService;
 
 import javax.validation.Valid;
 import java.math.BigDecimal;
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -30,6 +33,12 @@ public class ApiController {
 
 	@Autowired
 	private MoneyService moneyService;
+
+	@Autowired
+	private AccountService accountService;
+
+	@Autowired
+	private NotificationSender sender;
 
 	@GetMapping("/")
 	public ResponseEntity<Object> name() {
@@ -43,7 +52,7 @@ public class ApiController {
 		return new ResponseEntity(moneyService.getRest(userId), HttpStatus.OK);
 	}
 
-	@GetMapping("/moves/{userId}")
+	@GetMapping("/user/moves/{userId}")
 	public ResponseEntity<List<MoneyMove>> restsList(@PathVariable Long userId){
 		logger.info("Moves. userId = {}", userId);
 		List<MoneyMove> moves = moneyService.findMoves(userId);
@@ -67,18 +76,52 @@ public class ApiController {
 		return ResponseEntity.ok().body(HttpStatus.OK);
 	}
 
-	@PostMapping(value = "/pay/{userId}")
-	public ResponseEntity<?> pay(@PathVariable Long userId, @Valid @RequestBody MoneyMove move){
+	@PostMapping(value = "/enroll/{accountId}")
+	public ResponseEntity<?> enroll(@PathVariable Long accountId, @Valid @RequestBody MoneyMove move){
+		try {
+			logger.info("Enroll. accountId = {}", accountId);
+			Account account = accountService.getAccount(accountId);
+			move.setAccountId(accountId);
+			move.setDirection(1);
+			move.setOperation("enroll");
+			moneyService.addMove(move);
+			return ResponseEntity.ok().body(HttpStatus.OK);
+		} catch (ResourceNotFoundException ex) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found. AccountId = " + accountId);
+		}
+	}
+
+	@GetMapping("/moves/{accountId}")
+	public ResponseEntity<List<MoneyMove>> movesByAccount(@PathVariable Long accountId){
+		logger.info("Moves. accountId = {}", accountId);
+		List<MoneyMove> moves = moneyService.findMoves(accountId);
+		return new ResponseEntity(moves, HttpStatus.OK);
+	}
+
+	@PostMapping(value = "/pay/{accountId}")
+	public ResponseEntity<?> pay(@PathVariable Long accountId, @Valid @RequestBody MoneyMove move){
 		// Возможно, денежные операции нужно совершать с текущим системным временем
-		logger.info("Pay. userId = {}", userId);
-		BigDecimal moneyRest = moneyService.getRest(userId);
+		logger.info("Pay. accountId = {}", accountId);
+		BigDecimal moneyRest = moneyService.getRest(accountId);
 		if (moneyRest.compareTo(move.getAmount()) >= 0) {
-			move.setUserId(userId);
+			move.setAccountId(accountId);
 			move.setDirection(-1);
 			move.setOperation("pay");
 			MoneyMove newMoneyMove = moneyService.addMove(move);
+
+			Notification note = new Notification();
+			note.setOrderId(move.getOrderId());
+			note.setUserId(move.getUserId());
+			note.setMessage("Успешное списание средств: " + newMoneyMove.getAmount());
+			sender.send(note);
+
 			return ResponseEntity.ok().body(newMoneyMove);
 		} else {
+			Notification note = new Notification();
+			note.setOrderId(move.getOrderId());
+			note.setUserId(move.getUserId());
+			note.setMessage("Недостаточно средств для списания: " + move.getAmount());
+			sender.send(note);
 			return ResponseEntity.status(409).body("Not enough money");
 		}
 	}
@@ -96,4 +139,33 @@ public class ApiController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(request);
 		}
 	}
+
+	@GetMapping("/accounts")
+	public ResponseEntity<List<Account>> accountsList(){
+		logger.info("Accounts");
+		List<Account> accounts = accountService.findAllAccounts();
+		return new ResponseEntity(accounts, HttpStatus.OK);
+	}
+
+	@GetMapping("/accounts/{userId}")
+	public ResponseEntity<List<Account>> accountsByUser(@PathVariable Long userId){
+		logger.info("Moves. userId = {}", userId);
+		List<MoneyMove> moves = moneyService.findMoves(userId);
+		return new ResponseEntity(moves, HttpStatus.OK);
+	}
+
+	@PostMapping("/accounts")
+	public ResponseEntity<?> addAccount(@Valid @RequestBody Account account) {
+		logger.info("add account. account = {}", account);
+		Account accountNew = accountService.addAccount(account);
+		return ResponseEntity.ok().body(accountNew);
+	}
+
+	@DeleteMapping("/accounts")
+	public ResponseEntity<?> deleteAllAccounts(){
+		logger.info("Delete all accounts.");
+		accountService.deleteAll();
+		return ResponseEntity.ok().body(HttpStatus.OK);
+	}
+
 }

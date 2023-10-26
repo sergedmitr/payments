@@ -18,10 +18,8 @@ public class MoneyService {
 	@Autowired
 	private MoneyMoveRepository moneyMoveRepository;
 
-	public List<MoneyMove> findMoves(Long userId) {
-		//List<MoneyMove> moves = new ArrayList<>();
-		//moneyMoveRepository.findByUserId(userId).forEach(moves::add);
-		List<MoneyMove> moves = moneyMoveRepository.findByUserId(userId);
+	public List<MoneyMove> findMoves(Long accountId) {
+		List<MoneyMove> moves = moneyMoveRepository.findByAccountId(accountId);
 		System.out.println("moves = " + moves);
 		return moves;
 	}
@@ -30,8 +28,8 @@ public class MoneyService {
 		return moneyMoveRepository.save(move);
 	}
 
-	public BigDecimal getRest(Long userId) {
-		List<MoneyMove> moves = moneyMoveRepository.findByUserId(userId);
+	public BigDecimal getRest(Long accountId) {
+		List<MoneyMove> moves = moneyMoveRepository.findByAccountId(accountId);
 		BigDecimal rest = moves.stream().
 				map(m -> m.getAmount().multiply(BigDecimal.valueOf(m.getDirection()))). reduce(BigDecimal.ZERO,
 				(subtotal, e) -> subtotal.add(e));

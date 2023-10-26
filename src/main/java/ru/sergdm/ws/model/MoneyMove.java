@@ -28,6 +28,8 @@ public class MoneyMove {
 	BigDecimal amount;
 	@Column
 	Long orderId;
+	@Column
+	Long accountId;
 
 	public Long getMoveId() {
 		return moveId;
@@ -83,5 +85,27 @@ public class MoneyMove {
 
 	public void setOrderId(Long orderId) {
 		this.orderId = orderId;
+	}
+
+	public Long getAccountId() {
+		return accountId;
+	}
+
+	public void setAccountId(Long accountId) {
+		this.accountId = accountId;
+	}
+
+	@Override
+	public String toString() {
+		return "MoneyMove{" +
+				"moveId=" + moveId +
+				", userId=" + userId +
+				", moveDt=" + moveDt +
+				", direction=" + direction +
+				", operation='" + operation + '\'' +
+				", amount=" + amount +
+				", orderId=" + orderId +
+				", accountId=" + accountId +
+				'}';
 	}
 }
