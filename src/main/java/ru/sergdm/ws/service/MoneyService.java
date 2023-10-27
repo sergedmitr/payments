@@ -36,12 +36,12 @@ public class MoneyService {
 		return rest;
 	}
 
-	public void returnMove(Long userId, Long returnMoveId, Long orderId) throws ResourceNotFoundException, WrongUserException,
+	public void returnMove(Long accountId, Long returnMoveId, Long orderId) throws ResourceNotFoundException, WrongUserException,
 			ResourceNotExpectedException {
 		MoneyMove moveToReturn = moneyMoveRepository.findById(returnMoveId)
 				.orElseThrow(() -> new ResourceNotFoundException("Not found move with id = " + returnMoveId));
-		if (!moveToReturn.getUserId().equals(userId)) {
-			throw new WrongUserException("Returned pay belongs to other user");
+		if (!moveToReturn.getAccountId().equals(accountId)) {
+			throw new WrongUserException("Returned pay belongs to other Account");
 		}
 		if (!moveToReturn.getOperation().equals("pay")) {
 			throw new ResourceNotExpectedException("Only pays can be returned");
@@ -52,6 +52,7 @@ public class MoneyService {
 		returnedMove.setDirection(1);
 		returnedMove.setAmount(moveToReturn.getAmount());
 		returnedMove.setUserId(moveToReturn.getUserId());
+		returnedMove.setAccountId(moveToReturn.getAccountId());
 		returnedMove.setOrderId(orderId);
 
 		moneyMoveRepository.save(returnedMove);

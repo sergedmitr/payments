@@ -126,11 +126,11 @@ public class ApiController {
 		}
 	}
 
-	@PostMapping(value = "/pay-return/{userId}")
-	public ResponseEntity<?> payReturn(@PathVariable Long userId, @Valid @RequestBody ReturnRequest request){
-		logger.info("Pay-return. userId = {}", userId);
+	@PostMapping(value = "/pay-return/{accountId}")
+	public ResponseEntity<?> payReturn(@PathVariable Long accountId, @Valid @RequestBody ReturnRequest request){
+		logger.info("Pay-return. accountId = {}", accountId);
 		try {
-			moneyService.returnMove(userId, request.getReturnMoveId(), request.getOrderId());
+			moneyService.returnMove(accountId, request.getReturnMoveId(), request.getOrderId());
 			return ResponseEntity.ok().body(HttpStatus.OK);
 		} catch (WrongUserException | ResourceNotExpectedException ex) {
 			logger.error(ex.getMessage());
